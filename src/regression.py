@@ -30,16 +30,18 @@ class FrequentistRegression:
         return X
         
     def fit(self, obs: np.array, x: np.array, ridge_reg:float = 1e-8, fit_intercept: bool = True) -> Sequence:
-
-        self.design_matrix = self.create_design_matrix(x, 
+        if np.isnan(self.design_matrix).any(): 
+            self.design_matrix = self.create_design_matrix(x, 
                                       degree = self.degree, 
                                       fit_intercept = fit_intercept
                                       )
         X = self.design_matrix
+        print(X.shape)
         A = X.T @ X  
+        print(A.shape)
         inv_mat = np.linalg.inv(A + ridge_reg) 
         self.coeff_fitted = (inv_mat @ X.T @ obs)
-
+        
         # Computing covariance 
         self.cov = (self.sigma_noise) ** 2 * inv_mat
         self.std = np.sqrt(np.diag(self.cov)) 
@@ -48,7 +50,7 @@ class FrequentistRegression:
     def forward_model(self) -> np.array:
         return self.design_matrix @ self.coeff_fitted 
     
-    def compute_chi2(self, obs: np.array, x:np.array) -> float: 
+    def compute_chi2(self, obs: np.array) -> float: 
         """
         Computes the reduced chi squared using the observation and the model prediction
 
