@@ -36,9 +36,7 @@ class FrequentistRegression:
                                       fit_intercept = fit_intercept
                                       )
         X = self.design_matrix
-        print(X.shape)
         A = X.T @ X  
-        print(A.shape)
         inv_mat = np.linalg.inv(A + ridge_reg) 
         self.coeff_fitted = (inv_mat @ X.T @ obs)
         
@@ -46,11 +44,45 @@ class FrequentistRegression:
         self.cov = (self.sigma_noise) ** 2 * inv_mat
         self.std = np.sqrt(np.diag(self.cov)) 
         return (self.coeff_fitted, self.std)  
+    
+    def wfit(self, obs: np.array, x: np.array, ridge_reg:float = 1e-8, fit_intercept: bool = True) -> Sequence:
+        """
+        Computes the Maximum Likelihood Estimate and the noise of covariance with a weighted chi squared.
+
+        Args:
+            obs (np.array): Measurements (noisy)
+            x (np.array): Input variable
+            ridge_reg (float, optional): Ridge reguarization parameter. Defaults to 1e-8.
+            fit_intercept (bool, optional): Whether to fit an intercept parameter or not. Defaults to True.
+            weight (int, optional): Weights of the measurements obs. Must be equal to 1/var_i. Defaults to 1.
+
+        Returns:
+            Sequence: _description_
+        """
+        assert len(self.sigma_noise)>1
+        weight = 1 / self.sigma_noise ** 2
+        W = np.diag(weight)
+        if np.isnan(self.design_matrix).any(): 
+            self.design_matrix = self.create_design_matrix(x, 
+                                      degree = self.degree, 
+                                      fit_intercept = fit_intercept
+                                      )
+        X = self.design_matrix
+        A = X.T @ W @ X  
+        inv_mat = np.linalg.inv(A + ridge_reg) 
+        self.coeff_fitted = (inv_mat @ X.T @ W @ obs )
+        
+        # Computing covariance
+        obs_pred = self.forward_model() 
+        sigma_res = np.std(obs - obs_pred)
+        self.cov =  inv_mat * sigma_res ** 2
+        self.std = np.sqrt(np.diag(self.cov)) 
+        return (self.coeff_fitted, self.std)  
 
     def forward_model(self) -> np.array:
         return self.design_matrix @ self.coeff_fitted 
     
-    def compute_chi2(self, obs: np.array) -> float: 
+    def compute_chi2(self, obs: np.array, weighted = False) -> float: 
         """
         Computes the reduced chi squared using the observation and the model prediction
 
@@ -60,7 +92,8 @@ class FrequentistRegression:
         """
         obs_pred = self.forward_model()
         residuals = (obs - obs_pred) / self.sigma_noise
-        self.chi2 = np.sum(residuals ** 2) / len(obs)
+        num_params = self.design_matrix.shape[1] # number of regression parameters equal to the number of columns of the design matrix
+        self.chi2 = np.sum(residuals ** 2) / (len(obs) - num_params) # number of parameters = degree of equation + 1
         return self.chi2
 
     def general_routine(self, obs: np.array, x: np.array, ridge_reg:float = 1e-8, fit_intercept:bool = True):
