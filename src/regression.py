@@ -74,8 +74,12 @@ class FrequentistRegression:
         
         # Computing covariance
         obs_pred = self.forward_model() 
-        sigma_res = np.std(obs - obs_pred)
-        self.cov =  inv_mat * sigma_res ** 2
+        residuals = obs-obs_pred 
+        # sigma_res = np.sqrt(np.sum(weight * residuals ** 2) / (len(obs)))
+        # sigma_res = np.std(obs - obs_pred)
+        sigma_res = np.sqrt(np.sum(weight * residuals ** 2) / (len(obs) - (self.design_matrix.shape[1])))
+        self.chi2 = np.sum(residuals ** 2 * weight) / (len(obs) -(self.design_matrix.shape[1])) 
+        self.cov = inv_mat * sigma_res ** 2
         self.std = np.sqrt(np.diag(self.cov)) 
         return (self.coeff_fitted, self.std)  
 
