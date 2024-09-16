@@ -1,0 +1,30 @@
+## Discussion qualitative de l'analyse des données et des potentiels biais qui en découlent: 
+Dans un souci de complétude, nous discutons plus en détails ici la façon dont nous analysons les données, calculons les incertitudes et finalement investiguons les potentiels biais pouvant émerger dans nos résultats à cause des limites de notre approche actuelle. 
+
+
+### Méthodes d'analyse des données
+Comme méthode principale d'analyse des mesures, nous utilisons notre propre implémentation de la **régression linéaire fréquentiste de Ridge** (code dans le dossier `src/regression.py`) choisissant une régularisation $\lambda=10^{-12}$. Bien que d'autres implémentations existent déjà et ont été vérifiées dans la communauté (par exemple, la méthode `curve_fit` de la librairie `scipy`), nous voulions nous assurer de bien comprendre l'origine des résultats de la régression linéaire et la manière dont les incertitudes, que nous jugeons cruciales, sont calculées. L'approche de régression linéaire fréquentiste au cas Bayésien en considérant une distribution a priori $p(x)$ constante sur une certaine région et une vraisemblance $p(y\mid x)$ Gaussienne. Il y a différentes raisons pour lesquelles il est cohérent d'assumer une distribution a priori constante: 
+- Les modèles physiques sont simples et dépendent de peu de paramètres; 
+- Le modèle physique incorpore d'ores et déjà un montant considérable d'information a priori dans l'approche. La forme mathématique de la fonction que nous ajustons est très restrictive et il est donc inutile d'inclure de l'information additionnelle a priori. 
+Notons maintenant l'incertitude sur les paramètres du modèle physique à cause de la régression $\sigma_{reg}$ (celle-ci est obtenue en propageant l'incertitude $\sigma_{\beta_{i}}$ obtenue sur les paramètres de régression $\beta_{i}$ dans le modèle physique) et l'incertitude sur la mesure de notre instrument comme $\sigma_{inst}$. L'incertitude finale sur la prédiction de notre modèle physique est obtenue en additionnant en quadrature les deux  incertitudes mentionnées précédemment, i.e. $\sigma_{pred}^{2} = \sigma_{inst}^{2} + \sigma_{reg}^{2}$ .
+
+Lors de nos expériences, nous avons rencontré certains cas où il faut être prudent dans la façon dont nous calculons l'incertitude sur $\sigma_{reg}$. Nous distinguons 2 principaux cas
+- **Indépendance ou quasi-indépendance des paramètres de régression:** $\sigma_{\beta_{i}}=\sqrt{\text{Cov}(\beta_{i},\beta_{i})}$. Nous pouvons utiliser la formule usuelle de propagation des incertitudes dans ce cas-ci. 
+- **Cas de grande corrélation des paramètres de régression:**: dans ce cas-ci, il faut utiliser la matrice de covariance $\text{Cov}(\beta_{i},\beta_{j})$ au complet pour propager les incertitudes sur les paramètres physiques. Une formule pratique (que je vous laisse dériver) est  $J\Sigma_{\beta}J^{T}$ où $J=\frac{\partial \mathbf{x}}{\partial \beta}$ est la matrice Jacobienne de la transformation induite par le modèle physique. 
+
+Dans certains cas, l'estimation de l'incertitude des paramètres physiques échoue et peut donner des valeurs extrêmement grandes. Ceci peut être expliqué par plusieurs raisons: nombre de points insuffisants, modèle physique non représentatif des données, distribution de bruit non Gaussienne etc..
+
+### Potentiels biais 
+Nous soulignons dans cette section que de mauvaises hypothèses dans notre analyse des mesures peut créer un biais significatif dans nos résultats finaux. Ce biais peut avoir plusieurs origines dans notre cas: non applicabilité du TLC, bruit instrumental non Gaussien etc... Limiter ce biais implique avoir une analyse différente des données; notamment, le formalisme Bayésien (compatible avec la théorie de l'information [Shannon et al., 1948][3]) se prête bien à l'analyse de données ayant ces caractéristiques. Avant de continuer l'explication, définissons quelques quantités importantes: 
+- L'information $I(x, M)=-\log\ p(x,M)$ sur un événement $x$ et un modèle physique $M$;
+- Le théorème de Bayes: $\log \ p(x\mid y, M) = \log \ p(x,M) + \log \ p(y\mid x, M) +$ cste
+
+Puisque l'information est directement reliée à la densité de probabilité, on peut définir l'information reliée à l'événement $x$ (une quantité physique d'intérêt) étant donné l'observation de $y$ (ce qui est mesuré par l'instrument)  ainsi que le modèle physique $M$ considéré comme $I(x\mid y,M)$.  
+Une petite analyse des équations précédentes permet de déduire que minimiser la nouvelle information reçue $I(x\mid y, M)$ à chaque nouvelle mesure sur une quantité physique $x$ étant donné une observation $y$ et un modèle physique $M$ implique maximiser la distribution a posteriori $\log p(x\mid y,M)$, soit choisir la valeur de $x$ la plus probable selon les mesures et le modèle physique. 
+
+D'un point de vue Bayésien, la distribution a posteriori, $p(x\mid y, M)$, incorpore notre connaissance a priori, $p(x,M)$, avant toute mesure sur le système soit notre estimé de $x$ et notre hypothèse pour le modèle physique $M$ et la nouvelle information reçue, reliée à $p(y|x,M)$, après la mesure de nouvelles données $y$. Cette nouvelle information est limitée par notre instrument de mesure via la distribution de bruit (inclus dans la vraisemblance) et il est donc crucial de bien caractériser celle-ci. Dans des cas très particuliers où la vraisemblance n'est pas accessible directement via une formule analytique, il est alors nécessaire d'utiliser des techniques plus sophistiquées [Legin et al., 2023][1] [Adam et al., 2023][2] pour approximer la vraisemblance mais en l'incorporant tout de même dans le processus d'inférence du paramètre d'intérêt $x$.
+
+Références:  
+[1]: Legin R., et al., *Beyond Gaussian Noise: A Generalized Approach to Likelihood Analysis with Non-Gaussian Noise*. The Astrophysical Journal Letters, 2023.  
+[2]: Adam A., et al., *Echoes in the Noise: Posterior Samples of Faint Galaxy Surface Brightness Profiles with Score-Based Likelihoods and Priors*. Conference Proceedings, NeurIPS, 2023.  
+[3]: Shannon C., et al., *A Mathematical Theory of Communication*. The Bell System Technical Journal, 1948.  
