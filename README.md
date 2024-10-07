@@ -1,6 +1,6 @@
 # Laboratoire d'optique
 
-Auteur et Autrice du dépôt: Candela Muñoz Pérez et Noé Dia. 
+Autrice et Auteur du dépôt: Candela Muñoz Pérez et Noé Dia. 
 
 Ce dépôt github contient le code et pour les différentes expériences du cours de PHY3040. Le dossier `src` contient notre propre implémentation de certaines techniques de régression (notamment régression linéaire fréquentise et bayésiennes) ainsi que des échantilloneurs afin d'échantilloner des distributions de probabibilité (comme la distribution a posteriori). 
 
