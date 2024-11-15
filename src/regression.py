@@ -59,7 +59,7 @@ class FrequentistRegression:
         Returns:
             Sequence: _description_
         """
-        assert len(self.sigma_noise)>1
+        # assert len(self.sigma_noise)>1
         weight = 1 / self.sigma_noise ** 2
         W = np.diag(weight)
         if np.isnan(self.design_matrix).any(): 
